@@ -209,22 +209,6 @@ export function HoldButton({
 
     const digit = count === MAX_COUNT ? 0 : count;
     onDigitEntered(digit);
-
-    // Confirmation feedback
-    try {
-      if (vibrationSupported && navigator.vibrate) {
-        // slight delay to allow the cancel command to process
-        setTimeout(() => {
-          try { navigator.vibrate([80, 50, 80]); } catch {}
-        }, 50);
-      } else if (audioFallback) {
-        playConfirmSound();
-      }
-    } catch {
-      /* ignore */
-    }
-
-    speakRef.current(`Digit ${digit} entered`);
   }, [onDigitEntered, vibrationSupported, audioFallback]);
 
   const endHoldRef = useRef(endHold);
