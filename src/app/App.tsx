@@ -185,7 +185,7 @@ export default function App() {
       <div
         style={{
           minHeight: "100dvh",
-          backgroundColor: "#fff",
+          backgroundColor: "#f7f7f7",
           display: "flex",
           flexDirection: "column",
           maxWidth: 430,
@@ -474,7 +474,7 @@ export default function App() {
                     width: 64,
                     height: 64,
                     borderRadius: "50%",
-                    border: "2.5px solid #000",
+                    border: "2.5px solid #1a1a1a",
                     backgroundColor: "transparent",
                     display: "flex",
                     alignItems: "center",

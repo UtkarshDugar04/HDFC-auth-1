@@ -27,17 +27,17 @@ export function PINDisplay({ pin, revealDigits, appStatus }: PINDisplayProps) {
               width: 60,
               height: 60,
               borderRadius: 12,
-              border: `3px solid ${isError ? "#dc2626" : "#000"}`,
+              border: `3px solid ${isError ? "#dc2626" : "#1a1a1a"}`,
               backgroundColor: filled
                 ? isSuccess
-                  ? "#000"
-                  : "#000"
+                  ? "#1a1a1a"
+                  : "#1a1a1a"
                 : "transparent",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: filled && revealDigits ? 22 : 26,
-              color: "#fff",
+              color: "#f7f7f7",
               fontWeight: 700,
               transition: "background-color 0.15s ease, border-color 0.2s ease",
               flexShrink: 0,
@@ -67,7 +67,7 @@ export function PINDisplay({ pin, revealDigits, appStatus }: PINDisplayProps) {
                   style={{
                     display: "block",
                     fontSize: 14,
-                    color: "#000",
+                    color: "#1a1a1a",
                     fontWeight: 400,
                     letterSpacing: 1,
                   }}

@@ -122,7 +122,7 @@ export function ConfirmButton({
           cy={BUTTON_SIZE / 2}
           r={RADIUS}
           fill="none"
-          stroke="#000"
+          stroke="#1a1a1a"
           strokeWidth={3}
           strokeDasharray={CIRCUMFERENCE}
           strokeDashoffset={strokeDashoffset}
@@ -154,7 +154,7 @@ export function ConfirmButton({
           backgroundColor: isHolding
             ? `hsl(0, 0%, ${Math.max(0, 100 - progress * 100)}%)`
             : "transparent",
-          color: progress > 0.55 ? "#fff" : "#000",
+          color: progress > 0.55 ? "#f7f7f7" : "#1a1a1a",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
