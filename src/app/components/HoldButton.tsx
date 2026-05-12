@@ -95,20 +95,15 @@ export function HoldButton({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pulseResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const vibrate = useCallback(
-    (pattern: number | number[]) => {
-      try {
-        if (vibrationSupported && navigator.vibrate) {
-          navigator.vibrate(pattern);
-        } else if (audioFallback) {
-          playClickSound();
-        }
-      } catch {
-        /* ignore */
+  const doAudioPulse = useCallback(() => {
+    try {
+      if (!vibrationSupported && audioFallback) {
+        playClickSound();
       }
-    },
-    [vibrationSupported, audioFallback]
-  );
+    } catch {
+      /* ignore */
+    }
+  }, [vibrationSupported, audioFallback]);
 
   const speak = useCallback(
     (text: string) => {
@@ -128,9 +123,9 @@ export function HoldButton({
   );
 
   // Keep latest refs for use inside setInterval
-  const vibrateRef = useRef(vibrate);
+  const audioPulseRef = useRef(doAudioPulse);
   const speakRef = useRef(speak);
-  vibrateRef.current = vibrate;
+  audioPulseRef.current = doAudioPulse;
   speakRef.current = speak;
 
   const doPulse = useCallback(() => {
@@ -152,7 +147,7 @@ export function HoldButton({
       setButtonLightness(Math.max(68, 100 - count * 3.2));
     }, 90);
 
-    vibrateRef.current(100);
+    audioPulseRef.current();
     speakRef.current(String(count === MAX_COUNT ? 0 : count));
   }, []);
 
@@ -172,6 +167,19 @@ export function HoldButton({
       countRef.current = randomStart
         ? Math.floor(Math.random() * MAX_COUNT)
         : 0;
+
+      // Android Chrome workaround: start continuous native vibration pattern
+      // to avoid dropping vibrations called inside setInterval
+      if (vibrationSupported && navigator.vibrate) {
+        try {
+          const pattern = [];
+          for (let i = 0; i < 40; i++) {
+            pattern.push(100);
+            pattern.push(PULSE_INTERVAL_MS - 100);
+          }
+          navigator.vibrate(pattern);
+        } catch {}
+      }
 
       // First pulse immediately
       doPulseRef.current();
@@ -206,6 +214,11 @@ export function HoldButton({
     setCurrentCount(0);
     countRef.current = 0;
 
+    // Cancel the ongoing continuous vibration pattern
+    if (vibrationSupported && navigator.vibrate) {
+      try { navigator.vibrate(0); } catch {}
+    }
+
     if (count === 0) return;
 
     const digit = count === MAX_COUNT ? 0 : count;
@@ -214,7 +227,10 @@ export function HoldButton({
     // Confirmation feedback
     try {
       if (vibrationSupported && navigator.vibrate) {
-        navigator.vibrate([80, 50, 80]);
+        // slight delay to allow the cancel command to process
+        setTimeout(() => {
+          try { navigator.vibrate([80, 50, 80]); } catch {}
+        }, 50);
       } else if (audioFallback) {
         playConfirmSound();
       }
