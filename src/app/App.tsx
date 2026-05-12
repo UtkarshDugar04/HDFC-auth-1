@@ -579,7 +579,7 @@ export default function App() {
                 <strong style={{ color: "#9ca3af" }}>10 vibrations</strong> =
                 digit 0
               </span>
-              <span>Count loops after 10 · release when ready</span>
+              <span>Release to enter digit · auto-enters 0 after 10 pulses</span>
             </div>
 
             {settings.randomStart && (

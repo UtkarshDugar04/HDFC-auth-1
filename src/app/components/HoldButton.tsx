@@ -24,6 +24,9 @@ function getAudioCtx(): AudioContext | null {
         (window as unknown as { webkitAudioContext: typeof AudioContext })
           .webkitAudioContext)();
     }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
     return audioCtx;
   } catch {
     return null;
@@ -79,16 +82,11 @@ export function HoldButton({
   disabled,
   tutorialMode,
   randomStart,
-  devMode,
+  devMode, // keeping prop to avoid breaking App.tsx, but will ignore visually
   vibrationSupported,
   audioFallback,
 }: HoldButtonProps) {
   const [isHolding, setIsHolding] = useState(false);
-  const [currentCount, setCurrentCount] = useState(0);
-  const [pulseKey, setPulseKey] = useState(0);
-  const [buttonScale, setButtonScale] = useState(1);
-  const [buttonLightness, setButtonLightness] = useState(100);
-  const [scaleHasTransition, setScaleHasTransition] = useState(false);
 
   const countRef = useRef(0);
   const isPressedRef = useRef(false);
@@ -129,26 +127,18 @@ export function HoldButton({
   speakRef.current = speak;
 
   const doPulse = useCallback(() => {
-    countRef.current = (countRef.current % MAX_COUNT) + 1;
+    countRef.current += 1;
     const count = countRef.current;
-
-    setCurrentCount(count);
-    setPulseKey((k) => k + 1);
-
-    // Snap scale down instantly
-    setScaleHasTransition(false);
-    setButtonScale(0.84);
-
-    if (pulseResetRef.current) clearTimeout(pulseResetRef.current);
-    pulseResetRef.current = setTimeout(() => {
-      // Smooth spring back to hold-scale
-      setScaleHasTransition(true);
-      setButtonScale(Math.max(0.94, 1 - count * 0.004));
-      setButtonLightness(Math.max(68, 100 - count * 3.2));
-    }, 90);
 
     audioPulseRef.current();
     speakRef.current(String(count === MAX_COUNT ? 0 : count));
+
+    // After 10 pulses (digit 0), auto-select and stop
+    if (count >= MAX_COUNT) {
+      if (endHoldRef.current) {
+        endHoldRef.current();
+      }
+    }
   }, []);
 
   const doPulseRef = useRef(doPulse);
@@ -156,17 +146,16 @@ export function HoldButton({
 
   const startHold = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
-      e.preventDefault();
+      // Prevent default to stop duplicate mouse events on iOS after touch
+      if (e.cancelable) e.preventDefault();
+      
       if (disabled || isPressedRef.current) return;
 
       isPressedRef.current = true;
       setIsHolding(true);
-      setButtonLightness(100);
 
-      // Optionally start at random offset
-      countRef.current = randomStart
-        ? Math.floor(Math.random() * MAX_COUNT)
-        : 0;
+      // Starting at 0 to ensure 1 pulse = digit 1
+      countRef.current = 0;
 
       // Android Chrome workaround: start continuous native vibration pattern
       // to avoid dropping vibrations called inside setInterval
@@ -192,7 +181,8 @@ export function HoldButton({
     [disabled, randomStart]
   );
 
-  const endHold = useCallback(() => {
+  const endHold = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
+    if (e && e.cancelable) e.preventDefault();
     if (!isPressedRef.current) return;
     isPressedRef.current = false;
 
@@ -208,10 +198,6 @@ export function HoldButton({
     const count = countRef.current;
 
     setIsHolding(false);
-    setScaleHasTransition(true);
-    setButtonScale(1);
-    setButtonLightness(100);
-    setCurrentCount(0);
     countRef.current = 0;
 
     // Cancel the ongoing continuous vibration pattern
@@ -241,28 +227,15 @@ export function HoldButton({
     speakRef.current(`Digit ${digit} entered`);
   }, [onDigitEntered, vibrationSupported, audioFallback]);
 
+  const endHoldRef = useRef(endHold);
+  endHoldRef.current = endHold;
+
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (pulseResetRef.current) clearTimeout(pulseResetRef.current);
     };
   }, []);
-
-  const displayDigit =
-    currentCount === 0
-      ? ""
-      : currentCount === MAX_COUNT
-        ? "0"
-        : String(currentCount);
-
-  const bgColor = `hsl(0, 0%, ${buttonLightness}%)`;
-
-  const transitionStyle = [
-    "background-color 0.2s ease",
-    scaleHasTransition ? "transform 0.18s ease" : "",
-  ]
-    .filter(Boolean)
-    .join(", ");
 
   return (
     <div
@@ -275,101 +248,6 @@ export function HoldButton({
         height: 180,
       }}
     >
-      {/* Dev counter */}
-      {devMode && (
-        <div
-          style={{
-            position: "absolute",
-            top: -34,
-            left: "50%",
-            transform: "translateX(-50%)",
-            fontSize: 11,
-            fontFamily: "monospace",
-            color: "#9ca3af",
-            whiteSpace: "nowrap",
-            pointerEvents: "none",
-            background: "#f9fafb",
-            padding: "2px 8px",
-            borderRadius: 4,
-            border: "1px solid #e5e7eb",
-          }}
-          aria-hidden="true"
-        >
-          {currentCount > 0
-            ? `count: ${currentCount}  →  digit: ${currentCount === MAX_COUNT ? 0 : currentCount}`
-            : "waiting…"}
-        </div>
-      )}
-
-      {/* Ripple ring 1 — main pulse */}
-      <AnimatePresence>
-        {isHolding && (
-          <motion.div
-            key={`r1-${pulseKey}`}
-            initial={{ scale: 1, opacity: 0.55 }}
-            animate={{ scale: 1.75, opacity: 0 }}
-            exit={{}}
-            transition={{ duration: 0.65, ease: "easeOut" }}
-            style={{
-              position: "absolute",
-              width: 160,
-              height: 160,
-              borderRadius: "50%",
-              border: "2.5px solid rgba(0,0,0,0.35)",
-              pointerEvents: "none",
-            }}
-            aria-hidden="true"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Ripple ring 2 — trailing */}
-      <AnimatePresence>
-        {isHolding && pulseKey > 1 && (
-          <motion.div
-            key={`r2-${pulseKey}`}
-            initial={{ scale: 1.1, opacity: 0.3 }}
-            animate={{ scale: 2.1, opacity: 0 }}
-            exit={{}}
-            transition={{ duration: 0.9, ease: "easeOut" }}
-            style={{
-              position: "absolute",
-              width: 160,
-              height: 160,
-              borderRadius: "50%",
-              border: "1.5px solid rgba(0,0,0,0.15)",
-              pointerEvents: "none",
-            }}
-            aria-hidden="true"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Subtle count number shown inside circle for sighted users */}
-      <AnimatePresence mode="wait">
-        {isHolding && displayDigit && (
-          <motion.div
-            key={`digit-${displayDigit}`}
-            initial={{ opacity: 0, scale: 1.35 }}
-            animate={{ opacity: 0.16, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.75, transition: { duration: 0.1 } }}
-            transition={{ duration: 0.12 }}
-            style={{
-              position: "absolute",
-              fontSize: 72,
-              fontWeight: 900,
-              color: "#000",
-              letterSpacing: "-0.04em",
-              pointerEvents: "none",
-              userSelect: "none",
-              zIndex: 2,
-            }}
-            aria-hidden="true"
-          >
-            {displayDigit}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Main hold button */}
       <button
@@ -390,16 +268,15 @@ export function HoldButton({
           height: 160,
           borderRadius: "50%",
           border: "4px solid #000",
-          backgroundColor: bgColor,
+          backgroundColor: "#fff",
           cursor: disabled ? "not-allowed" : "default",
           outline: "none",
           userSelect: "none",
           WebkitUserSelect: "none",
+          WebkitTouchCallout: "none",
           touchAction: "none",
           WebkitTapHighlightColor: "transparent",
           opacity: disabled ? 0.2 : 1,
-          transform: `scale(${buttonScale})`,
-          transition: transitionStyle,
           position: "relative",
           zIndex: 1,
           flexShrink: 0,
@@ -419,7 +296,7 @@ export function HoldButton({
           }}
         >
           {isHolding
-            ? `Currently at count ${currentCount === MAX_COUNT ? 0 : currentCount}`
+            ? "Currently holding..."
             : "Press and hold to enter digit"}
         </span>
       </button>

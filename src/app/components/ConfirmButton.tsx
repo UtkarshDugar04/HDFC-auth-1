@@ -68,7 +68,8 @@ export function ConfirmButton({
     [disabled]
   );
 
-  const endHold = useCallback(() => {
+  const endHold = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
+    if (e && e.cancelable) e.preventDefault();
     if (!isPressedRef.current) return;
     isPressedRef.current = false;
 
@@ -164,6 +165,7 @@ export function ConfirmButton({
           transition: "background-color 0.04s linear, color 0.1s ease",
           userSelect: "none",
           WebkitUserSelect: "none",
+          WebkitTouchCallout: "none",
           outline: "none",
         }}
       >
