@@ -315,6 +315,30 @@ export function SettingsPanel({
               : "⚠ Vibration not available — using audio fallback"}
           </p>
         </div>
+
+        {/* Test button */}
+        {vibrationSupported && (
+          <button
+            onClick={() => {
+              if (navigator.vibrate) {
+                navigator.vibrate([100, 200, 100]);
+              }
+            }}
+            style={{
+              width: "100%",
+              marginTop: 16,
+              padding: "12px",
+              borderRadius: 10,
+              backgroundColor: "#111",
+              color: "#fff",
+              fontWeight: 600,
+              border: "none",
+              cursor: "pointer"
+            }}
+          >
+            Test Haptic Pulse
+          </button>
+        )}
       </motion.div>
     </>
   );
