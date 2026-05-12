@@ -320,7 +320,8 @@ export function SettingsPanel({
         <button
           onClick={() => {
             if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-              navigator.vibrate([100, 200, 100]);
+              const success = navigator.vibrate(200);
+              alert("Vibration command sent! Browser accepted it: " + success);
             } else {
               alert("navigator.vibrate is NOT available on this device/browser.");
             }
