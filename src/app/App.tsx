@@ -31,7 +31,7 @@ export default function App() {
 
   const [vibrationSupported] = useState<boolean>(() => {
     if (typeof navigator === "undefined") return false;
-    return "vibrate" in navigator;
+    return typeof navigator.vibrate === "function";
   });
 
   const [settings, setSettings] = useState<AppSettings>({
